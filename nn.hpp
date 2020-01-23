@@ -20,6 +20,7 @@ class Nn
 public:
   Nn(Spec *);
   ~Nn(void);
+  void init_w(void);
   double sigmoid(double x) { return 1 / (1. + exp(-x)); };
   double dsigmoid(double x) { return sigmoid(x) * (1. - sigmoid(x)); };
   double dsoftmax(double x) { return dsigmoid(x); };
