@@ -12,6 +12,18 @@ struct Spec
   double eta_p, eta_m, delta_max, delta_min;
 };
 
+struct Grad
+{
+  std::vector<double> HB, OB;
+  std::vector<std::vector<double>> IHW, HOW;
+};
+
+struct Delta
+{
+  std::vector<double> HB, OB;
+  std::vector<std::vector<double>> IHW, HOW;
+};
+
 class Nn
 {
   Spec s;
@@ -23,7 +35,7 @@ public:
   ~Nn(void);
   void normalize(std::vector<std::vector<double>> *, std::vector<std::vector<double>> *);
   std::vector<double> train(std::vector<std::vector<double>> *, size_t);
-  double mse(void);
+  double mse(std::vector<std::vector<double>> *);
   std::vector<double> calc_outputs(std::vector<double> *);
   std::vector<double> softmax(std::vector<double> *);
   char sign(double);

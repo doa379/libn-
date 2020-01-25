@@ -1,6 +1,6 @@
 #include <random>
 #include <algorithm>
-//#include <iostream>
+#include <iostream>
 #include "nn.hpp"
 #include "metrics.hpp"
 
@@ -71,21 +71,37 @@ void Nn::normalize(std::vector<std::vector<double>> *O, std::vector<std::vector<
 std::vector<double> Nn::train(std::vector<std::vector<double>> *I, size_t epochs)
 {
   std::vector<double> MSE;
+  Grad g, prev_g;
+  Delta d_prev;
   
   for (size_t i = 0; i < epochs; i++)
     {
       if ((i + 1) % (epochs / 10) == 0)
 	{
-	  MSE.emplace_back(mse());
+	  //MSE.emplace_back(mse(I));
+	  std::cout << mse(I) << std::endl;
 	}
     }
 
   return MSE;
 }
 
-double Nn::mse(void)
+double Nn::mse(std::vector<std::vector<double>> *I)
 {
-  return 0;
+  double se = 0;
+  
+  for (std::vector<std::vector<double>>::iterator J = I->begin(); J < I->end() - 1; J++)
+    {
+      std::vector<double> P = calc_outputs(&(*J));
+
+      for (unsigned i = 0; i < s.NO; i++)
+	{
+	  double err = (*(J + 1))[i] - P[i];
+	  se += err * err;
+	}
+    }
+  
+  return se / (I->size() - 1);
 }
 
 std::vector<double> Nn::calc_outputs(std::vector<double> *I)
