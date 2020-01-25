@@ -1,4 +1,6 @@
 #include <random>
+#include <algorithm>
+//#include <iostream>
 #include "nn.hpp"
 #include "metrics.hpp"
 
@@ -8,64 +10,114 @@ Nn::Nn(Spec *s)
   unsigned NI = s->NI,
     NH = s->NH,
     NO = s->NO;
-  I = new double [NI];
-  IHW = new double *[NI];
+  std::default_random_engine generator;
+  std::uniform_int_distribution<int> distribution(1, KILO - 1);
 
   for (unsigned i = 0; i < NI; i++)
-    IHW[i] = new double[NH];
+    {
+      std::vector<double> IHW;
+      
+      for (unsigned j = 0; j < NH; j++)
+	IHW.emplace_back((double) distribution(generator) / MEGA);
 
-  HB = new double[NH];
-  HOW = new double *[NO];
+      this->IHW.emplace_back(IHW);
+    }
+
+  for (unsigned i = 0; i < NH; i++)
+    this->HB.emplace_back((double) distribution(generator) / MEGA);
 
   for (unsigned i = 0; i < NO; i++)
-    HOW[i] = new double[NH];
+    {
+      std::vector<double> HOW;
+      
+      for (unsigned j = 0; j < NH; j++)
+	HOW.emplace_back((double) distribution(generator) / MEGA);
 
-  OB = new double[NO];
-  HO = new double[NH];
-  O = new double[NO];
-  init_w();
+      this->HOW.emplace_back(HOW);
+    }
+  
+  for (unsigned i = 0; i < NO; i++)
+    this->OB.emplace_back((double) distribution(generator) / MEGA);
 }
 
 Nn::~Nn(void)
 {
-  unsigned NI = s.NI,
-    NO = s.NO;
-  delete [] O;
-  delete [] HO;
-  delete [] OB;
 
-  for (unsigned i = 0; i < NO; i++)
-    delete [] HOW[i];
-
-  delete [] HOW;
-  delete [] HB;
-
-  for (unsigned i = 0; i < NI; i++)
-    delete [] IHW[i];
-
-  delete [] IHW;
-  delete [] I;
 }
 
-void Nn::init_w()
+void Nn::normalize(std::vector<std::vector<double>> *O, std::vector<std::vector<double>> *I)
 {
-  unsigned NI = s.NI,
-    NH = s.NH,
-    NO = s.NO;
-  std::default_random_engine generator;
-  std::uniform_int_distribution<int> distribution(1, KILO);
+  std::vector<std::vector<double>> RT, NT; // Raw/Normalized Transpose
+  transpose(&RT, I);
+  
+  for (std::vector<double> &R : RT)
+    {
+      double min = *std::min_element(R.begin(), R.end()),
+	max = *std::max_element(R.begin(), R.end());
+      std::vector<double> NR;
 
-  for (unsigned i = 0; i < NI; i++)
-    for (unsigned j = 0; j < NH; j++)
-      IHW[i][j] = (double) distribution(generator) / MEGA;
+      for (std::vector<double>::iterator r = R.begin(); r < R.end() - 1; r++)
+	{
+	  double n = perc_diff(*r, *(r + 1), min, max) / 100;
+	  NR.emplace_back(n);
+	}
 
-  for (unsigned i = 0; i < NH; i++)
-    HB[i] = (double) distribution(generator) / MEGA;
+      NT.emplace_back(NR);
+    }
 
-  for (unsigned i = 0; i < NO; i++)
-    for (unsigned j = 0; j < NH; j++)
-    HOW[i][j] = (double) distribution(generator) / MEGA;
-
-  for (unsigned i = 0; i < NO; i++)
-    OB[i] = (double) distribution(generator) / MEGA;
+  transpose(O, &NT);
 }
+
+std::vector<double> Nn::train(std::vector<std::vector<double>> *I, size_t epochs)
+{
+  std::vector<double> MSE;
+  
+  for (size_t i = 0; i < epochs; i++)
+    {
+      if ((i + 1) % (epochs / 10) == 0)
+	{
+	  MSE.emplace_back(mse());
+	}
+    }
+
+  return MSE;
+}
+
+double Nn::mse(void)
+{
+  return 0;
+}
+
+char Nn::sign(double a)
+{
+  if (fabs(a) < NANO)
+    return 0;
+
+  else if (a > 0)
+    return 1;
+
+  return -1;
+}
+
+double Nn::norm(double p, double min, double max)
+{
+  if (min == max)
+    return 0;
+  
+  return (p - min) / (max - min);
+}
+
+double Nn::perc_diff(double a, double b, double min, double max)
+{
+  a = norm(a, min, max);
+  b = norm(b, min, max);
+  
+  if (!sign(a) && !sign(b))
+    return 0;
+
+  else if (!sign(a))
+    return 100;
+
+  return fabs(b - a) / (a + b) * 2 * 100;
+}
+

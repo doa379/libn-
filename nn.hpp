@@ -3,24 +3,30 @@
 
 #include <cstddef>
 #include <cmath>
+#include <vector>
 
 struct Spec
 {
-  // Number { Features, Layers (1), Neurons, Inputs, Hidden, Output }
-  unsigned NF, NL, NN, NI, NH, NO;
+  // Number { Layers (1), Inputs/Features, Hidden, Output }
+  unsigned NL, NI, NH, NO;
   double eta_p, eta_m, delta_max, delta_min;
-  size_t epochs;
 };
 
 class Nn
 {
   Spec s;
-  double *I, **IHW, *HB, *HO, **HOW, *OB, *O;
+  std::vector<double> HB, HO, OB, O;
+  std::vector<std::vector<double>> IHW, HOW;
   
 public:
   Nn(Spec *);
   ~Nn(void);
-  void init_w(void);
+  void normalize(std::vector<std::vector<double>> *, std::vector<std::vector<double>> *);
+  std::vector<double> train(std::vector<std::vector<double>> *, size_t);
+  double mse(void);
+  char sign(double);
+  double norm(double, double, double);
+  double perc_diff(double, double, double, double);
   double sigmoid(double x) { return 1 / (1. + exp(-x)); };
   double dsigmoid(double x) { return sigmoid(x) * (1. - sigmoid(x)); };
   double dsoftmax(double x) { return dsigmoid(x); };
@@ -28,5 +34,22 @@ public:
   double dactivation(double x) { return dtanh(x); };
   double activation(double x) { return tanh(x); };
 };
+
+template <class T>
+void transpose(std::vector<std::vector<T>> *O, std::vector<std::vector<T>> *I)
+{
+  size_t r = I->size(),
+    c = I->at(0).size();
+
+  for (size_t i = 0; i < c; i++)
+    {
+      std::vector<T> R;
+
+      for (size_t j = 0; j < r; j++)
+	R.emplace_back((*I)[j][i]);
+
+      O->emplace_back(R);
+    }
+} 
 
 #endif
