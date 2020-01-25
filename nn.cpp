@@ -88,6 +88,53 @@ double Nn::mse(void)
   return 0;
 }
 
+std::vector<double> Nn::calc_outputs(std::vector<double> *I)
+{ // Online Input
+  std::vector<double> O { }, HO { };
+
+  for (unsigned i = 0; i < s.NH; i++)
+    {
+      double hs = 0;
+	
+      for (unsigned j = 0; j < s.NI; j++)
+	hs += (*I)[j] * IHW[j][i] + HB[i];
+
+      HO.emplace_back(activation(hs));
+    }
+
+  for (unsigned i = 0; i < s.NO; i++)
+    {
+      double os = 0;
+      
+      for (unsigned j = 0; j < s.NH; j++)
+	os += HO[j] * HOW[i][j] + OB[i];
+
+      O.emplace_back(os);
+    }
+
+  return softmax(&O);
+  //return O;
+}
+
+std::vector<double> Nn::softmax(std::vector<double> *I)
+{
+  double max = *std::max_element(I->begin(), I->end()),
+    scale = 0;
+
+  for (std::vector<double>::iterator i = I->begin(); i < I->end(); i++)
+    scale += exp(*i - max);
+
+  std::vector<double> O;
+
+  for (std::vector<double>::iterator i = I->begin(); i < I->end(); i++)
+    {
+      double res = exp(*i - max) / scale;
+      O.emplace_back(res);
+    }
+
+  return O;
+}
+
 char Nn::sign(double a)
 {
   if (fabs(a) < NANO)
@@ -120,4 +167,3 @@ double Nn::perc_diff(double a, double b, double min, double max)
 
   return fabs(b - a) / (a + b) * 2 * 100;
 }
-

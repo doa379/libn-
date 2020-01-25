@@ -15,7 +15,7 @@ struct Spec
 class Nn
 {
   Spec s;
-  std::vector<double> HB, HO, OB, O;
+  std::vector<double> HB, OB;
   std::vector<std::vector<double>> IHW, HOW;
   
 public:
@@ -24,6 +24,8 @@ public:
   void normalize(std::vector<std::vector<double>> *, std::vector<std::vector<double>> *);
   std::vector<double> train(std::vector<std::vector<double>> *, size_t);
   double mse(void);
+  std::vector<double> calc_outputs(std::vector<double> *);
+  std::vector<double> softmax(std::vector<double> *);
   char sign(double);
   double norm(double, double, double);
   double perc_diff(double, double, double, double);
