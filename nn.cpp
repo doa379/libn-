@@ -1,6 +1,6 @@
 #include <random>
 #include <algorithm>
-#include <iostream>
+//#include <iostream>
 #include "nn.hpp"
 #include "metrics.hpp"
 
@@ -15,29 +15,45 @@ Nn::Nn(Spec *s)
 
   for (unsigned i = 0; i < NI; i++)
     {
-      std::vector<double> IHW;
+      std::vector<double> w_IHW, g_IHW;
       
       for (unsigned j = 0; j < NH; j++)
-	IHW.emplace_back((double) distribution(generator) / MEGA);
+	{
+	  w_IHW.emplace_back((double) distribution(generator) / MEGA);
+	  g_IHW.emplace_back();
+	}
 
-      this->IHW.emplace_back(IHW);
+      w.IHW.emplace_back(w_IHW);
+      g.IHW.emplace_back(g_IHW);
     }
 
   for (unsigned i = 0; i < NH; i++)
-    this->HB.emplace_back((double) distribution(generator) / MEGA);
+    {
+      w.HB.emplace_back((double) distribution(generator) / MEGA);
+      g.HB.emplace_back();
+    }
 
   for (unsigned i = 0; i < NO; i++)
     {
-      std::vector<double> HOW;
+      std::vector<double> w_HOW, g_HOW;
       
       for (unsigned j = 0; j < NH; j++)
-	HOW.emplace_back((double) distribution(generator) / MEGA);
+	{
+	  w_HOW.emplace_back((double) distribution(generator) / MEGA);
+	  g_HOW.emplace_back();
+	}
 
-      this->HOW.emplace_back(HOW);
+      w.HOW.emplace_back(w_HOW);
+      g.HOW.emplace_back(g_HOW);
     }
   
   for (unsigned i = 0; i < NO; i++)
-    this->OB.emplace_back((double) distribution(generator) / MEGA);
+    {
+      w.OB.emplace_back((double) distribution(generator) / MEGA);
+      g.OB.emplace_back();
+    }
+
+  prev_g = g;
 }
 
 Nn::~Nn(void)
@@ -71,19 +87,54 @@ void Nn::normalize(std::vector<std::vector<double>> *O, std::vector<std::vector<
 std::vector<double> Nn::train(std::vector<std::vector<double>> *I, size_t epochs)
 {
   std::vector<double> MSE;
-  Grad g, prev_g;
-  Delta d_prev;
   
   for (size_t i = 0; i < epochs; i++)
     {
       if ((i + 1) % (epochs / 10) == 0)
-	{
-	  //MSE.emplace_back(mse(I));
-	  std::cout << mse(I) << std::endl;
-	}
+	MSE.emplace_back(mse(I));
+
+      calc_grads(I);
     }
 
   return MSE;
+}
+
+void Nn::calc_grads(std::vector<std::vector<double>> *I)
+{
+  double OG[s.NO], HG[s.NH];
+  
+  for (std::vector<std::vector<double>>::iterator J = I->begin(); J < I->end() - 1; J++)
+    {
+      std::vector<double> P = calc_outputs(&(*J)),
+	T = *(J + 1);
+
+      for (unsigned i = 0; i < s.NO; i++)
+	OG[i] = dsoftmax(P[i]) * (P[i] - T[i]);
+
+      for (unsigned i = 0; i < s.NH; i++)
+	{
+	  double sum = 0;
+
+	  for (unsigned j = 0; j < s.NO; j++)
+	    sum += OG[j] * w.HOW[j][i];
+
+	  HG[i] = dactivation(HO[i]) * sum;
+	}
+
+      for (unsigned i = 0; i < s.NH; i++)
+	for (unsigned j = 0; j < s.NO; j++)
+	  g.HOW[j][i] += OG[j] * HO[i];
+
+      for (unsigned i = 0; i < s.NO; i++)
+	g.OB[i] += OG[i];
+
+      for (unsigned i = 0; i < s.NI; i++)
+	for (unsigned j = 0; j < s.NH; j++)
+	  g.IHW[i][j] += HG[j] * (*J)[i];
+
+      for (unsigned i = 0; i < s.NH; i++)
+	g.HB[i] += HG[i];
+    }
 }
 
 double Nn::mse(std::vector<std::vector<double>> *I)
@@ -106,14 +157,15 @@ double Nn::mse(std::vector<std::vector<double>> *I)
 
 std::vector<double> Nn::calc_outputs(std::vector<double> *I)
 { // Online Input
-  std::vector<double> O { }, HO { };
+  std::vector<double> O { };
+  HO.clear();
 
   for (unsigned i = 0; i < s.NH; i++)
     {
       double hs = 0;
 	
       for (unsigned j = 0; j < s.NI; j++)
-	hs += (*I)[j] * IHW[j][i] + HB[i];
+	hs += (*I)[j] * w.IHW[j][i] + w.HB[i];
 
       HO.emplace_back(activation(hs));
     }
@@ -123,7 +175,7 @@ std::vector<double> Nn::calc_outputs(std::vector<double> *I)
       double os = 0;
       
       for (unsigned j = 0; j < s.NH; j++)
-	os += HO[j] * HOW[i][j] + OB[i];
+	os += HO[j] * w.HOW[i][j] + w.OB[i];
 
       O.emplace_back(os);
     }

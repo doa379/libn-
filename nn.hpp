@@ -12,29 +12,24 @@ struct Spec
   double eta_p, eta_m, delta_max, delta_min;
 };
 
-struct Grad
+struct Weight
 {
   std::vector<double> HB, OB;
-  std::vector<std::vector<double>> IHW, HOW;
-};
-
-struct Delta
-{
-  std::vector<double> HB, OB;
-  std::vector<std::vector<double>> IHW, HOW;
+  std::vector<std::vector<double>> IHW /* NI x NH */, HOW /* NO x NH */;
 };
 
 class Nn
 {
   Spec s;
-  std::vector<double> HB, OB;
-  std::vector<std::vector<double>> IHW, HOW;
+  std::vector<double> HO;
+  Weight w, g, prev_g, prev_d;
   
 public:
   Nn(Spec *);
   ~Nn(void);
   void normalize(std::vector<std::vector<double>> *, std::vector<std::vector<double>> *);
   std::vector<double> train(std::vector<std::vector<double>> *, size_t);
+  void calc_grads(std::vector<std::vector<double>> *);
   double mse(std::vector<std::vector<double>> *);
   std::vector<double> calc_outputs(std::vector<double> *);
   std::vector<double> softmax(std::vector<double> *);
@@ -43,8 +38,8 @@ public:
   double perc_diff(double, double, double, double);
   double sigmoid(double x) { return 1 / (1. + exp(-x)); };
   double dsigmoid(double x) { return sigmoid(x) * (1. - sigmoid(x)); };
-  double dsoftmax(double x) { return dsigmoid(x); };
-  double dtanh(double x) { return 1. - tanh(x) * tanh(x); };
+  double dsoftmax(double x) { return (1. - x) * x; };
+  double dtanh(double x) { return (1. - x) * (1. + x); };
   double dactivation(double x) { return dtanh(x); };
   double activation(double x) { return tanh(x); };
 };
