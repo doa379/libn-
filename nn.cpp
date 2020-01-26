@@ -7,64 +7,69 @@
 Nn::Nn(Spec *s)
 {
   this->s = Spec(*s);
-  unsigned NI = s->NI,
-    NH = s->NH,
-    NO = s->NO;
-  std::default_random_engine generator;
-  std::uniform_int_distribution<int> distribution(1, KILO - 1);
-
-  for (unsigned i = 0; i < NI; i++)
-    {
-      std::vector<double> w_IHW, g_IHW, d_IHW;
-      
-      for (unsigned j = 0; j < NH; j++)
-	{
-	  w_IHW.emplace_back((double) distribution(generator) / KILO);
-	  g_IHW.emplace_back();
-	  d_IHW.emplace_back(INIT_D);
-	}
-
-      w.IHW.emplace_back(w_IHW);
-      g.IHW.emplace_back(g_IHW);
-      prev_d.IHW.emplace_back(d_IHW);
-    }
-
-  for (unsigned i = 0; i < NH; i++)
-    {
-      w.HB.emplace_back((double) distribution(generator) / KILO);
-      g.HB.emplace_back();
-      prev_d.HB.emplace_back(INIT_D);
-    }
-
-  for (unsigned i = 0; i < NO; i++)
-    {
-      std::vector<double> w_HOW, g_HOW, d_HOW;
-      
-      for (unsigned j = 0; j < NH; j++)
-	{
-	  w_HOW.emplace_back((double) distribution(generator) / KILO);
-	  g_HOW.emplace_back();
-	  d_HOW.emplace_back(INIT_D);
-	}
-
-      w.HOW.emplace_back(w_HOW);
-      g.HOW.emplace_back(g_HOW);
-      prev_d.HOW.emplace_back(d_HOW);
-    }
-  
-  for (unsigned i = 0; i < NO; i++)
-    {
-      w.OB.emplace_back((double) distribution(generator) / KILO);
-      g.OB.emplace_back();
-      prev_d.OB.emplace_back(INIT_D);
-    }
-
+  init_weight(&w);
+  init_weight(&g, 0);
+  g0 = Weight(g);
   prev_g = Weight(g);
+  init_weight(&prev_d, INIT_D);
 }
 
 Nn::~Nn(void)
 {
 
+}
+
+void Nn::init_weight(Weight *u)
+{
+  std::default_random_engine generator;
+  std::uniform_int_distribution<int> distribution(1, KILO - 1);
+
+  for (unsigned i = 0; i < s.NI; i++)
+    {
+      std::vector<double> IHW;
+      
+      for (unsigned j = 0; j < s.NH; j++)
+	IHW.emplace_back((double) distribution(generator) / KILO);
+
+      u->IHW.emplace_back(IHW);
+    }
+
+  for (unsigned i = 0; i < s.NH; i++)
+    u->HB.emplace_back((double) distribution(generator) / KILO);
+
+  for (unsigned i = 0; i < s.NO; i++)
+    {
+      std::vector<double> HOW;
+      
+      for (unsigned j = 0; j < s.NH; j++)
+	HOW.emplace_back((double) distribution(generator) / KILO);
+
+      u->HOW.emplace_back(HOW);
+    }
+  
+  for (unsigned i = 0; i < s.NO; i++)
+    u->OB.emplace_back((double) distribution(generator) / KILO);
+}
+
+void Nn::init_weight(Weight *u, double v)
+{
+  for (unsigned i = 0; i < s.NI; i++)
+    {
+      std::vector<double> IHW;
+      IHW.assign(s.NH, v);
+      u->IHW.emplace_back(IHW);
+    }
+
+  u->HB.assign(s.NH, v);
+
+  for (unsigned i = 0; i < s.NO; i++)
+    {
+      std::vector<double> HOW;
+      HOW.assign(s.NH, v);
+      u->HOW.emplace_back(HOW);
+    }
+
+  u->OB.assign(s.NO, v);
 }
 
 void Nn::normalize(std::vector<std::vector<double>> *O, std::vector<std::vector<double>> *I)
@@ -99,6 +104,7 @@ std::vector<double> Nn::train(std::vector<std::vector<double>> *I, size_t epochs
       if ((i + 1) % (epochs / 10) == 0)
 	MSE.emplace_back(mse(I));
 
+      g = Weight(g0);
       calc_grads(I);
       update_w();
     }
@@ -223,7 +229,7 @@ double Nn::mse(std::vector<std::vector<double>> *I)
 
 std::vector<double> Nn::calc_outputs(std::vector<double> *I)
 { // Online Input
-  std::vector<double> O { };
+  std::vector<double> O{ };
   HO.clear();
 
   for (unsigned i = 0; i < s.NH; i++)

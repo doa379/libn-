@@ -22,11 +22,13 @@ class Nn
 {
   Spec s;
   std::vector<double> HO;
-  Weight w, g, prev_g, prev_d;
+  Weight w, g, g0, prev_g, prev_d;
   
 public:
   Nn(Spec *);
   ~Nn(void);
+  void init_weight(Weight *);
+  void init_weight(Weight *, double);
   void normalize(std::vector<std::vector<double>> *, std::vector<std::vector<double>> *);
   std::vector<double> train(std::vector<std::vector<double>> *, size_t);
   void calc_grads(std::vector<std::vector<double>> *);
@@ -40,10 +42,10 @@ public:
   double perc_diff(double, double, double, double);
   double sigmoid(double x) { return 1 / (1. + exp(-x)); };
   double dsigmoid(double x) { return sigmoid(x) * (1. - sigmoid(x)); };
-  double dsoftmax(double x) { return (1. - x) * x; };
-  double dtanh(double x) { return 1. - x * x; };
-  //double dsoftmax(double x) { return dsigmoid(x); };
-  //double dtanh(double x) { return 1. - tanh(x) * tanh(x); };
+  //double dsoftmax(double x) { return (1. - x) * x; };
+  //double dtanh(double x) { return 1. - x * x; };
+  double dsoftmax(double x) { return dsigmoid(x); };
+  double dtanh(double x) { return 1. - tanh(x) * tanh(x); };
   double dactivation(double x) { return dtanh(x); };
   double activation(double x) { return tanh(x); };
 };

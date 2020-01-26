@@ -32,7 +32,7 @@ void print_matrix(std::vector<std::vector<double>> *I)
 
 int main()
 {
-  Spec s = { 1, NF, NH, NO, 1.2, 0.5, 50.0, MICRO };
+  Spec s{ 1, NF, NH, NO, 1.2, 0.5, 50.0, MICRO };
   Nn nn(&s);
   std::vector<std::vector<double>> N, I;
 
@@ -53,7 +53,7 @@ int main()
   nn.normalize(&N, &I);
   std::cout << "Normalized Data\n======\n";
   print_matrix(&N);
-  std::vector<double> MSE = nn.train(&N, 10000);
+  std::vector<double> MSE = nn.train(&N, 1000);
   std::cout << "Errors\n======\n";
   
   for (double &mse : MSE)
