@@ -15,42 +15,48 @@ Nn::Nn(Spec *s)
 
   for (unsigned i = 0; i < NI; i++)
     {
-      std::vector<double> w_IHW, g_IHW;
+      std::vector<double> w_IHW, g_IHW, d_IHW;
       
       for (unsigned j = 0; j < NH; j++)
 	{
 	  w_IHW.emplace_back((double) distribution(generator) / MEGA);
 	  g_IHW.emplace_back();
+	  d_IHW.emplace_back(0.01);
 	}
 
       w.IHW.emplace_back(w_IHW);
       g.IHW.emplace_back(g_IHW);
+      prev_d.IHW.emplace_back(d_IHW);
     }
 
   for (unsigned i = 0; i < NH; i++)
     {
       w.HB.emplace_back((double) distribution(generator) / MEGA);
       g.HB.emplace_back();
+      prev_d.HB.emplace_back(0.01);
     }
 
   for (unsigned i = 0; i < NO; i++)
     {
-      std::vector<double> w_HOW, g_HOW;
+      std::vector<double> w_HOW, g_HOW, d_HOW;
       
       for (unsigned j = 0; j < NH; j++)
 	{
 	  w_HOW.emplace_back((double) distribution(generator) / MEGA);
 	  g_HOW.emplace_back();
+	  d_HOW.emplace_back(0.01);
 	}
 
       w.HOW.emplace_back(w_HOW);
       g.HOW.emplace_back(g_HOW);
+      prev_d.HOW.emplace_back(d_HOW);
     }
   
   for (unsigned i = 0; i < NO; i++)
     {
       w.OB.emplace_back((double) distribution(generator) / MEGA);
       g.OB.emplace_back();
+      prev_d.OB.emplace_back(0.01);
     }
 
   prev_g = g;
@@ -94,6 +100,7 @@ std::vector<double> Nn::train(std::vector<std::vector<double>> *I, size_t epochs
 	MSE.emplace_back(mse(I));
 
       calc_grads(I);
+      update_w();
     }
 
   return MSE;
@@ -135,6 +142,58 @@ void Nn::calc_grads(std::vector<std::vector<double>> *I)
       for (unsigned i = 0; i < s.NH; i++)
 	g.HB[i] += HG[i];
     }
+}
+
+void Nn::update_w(void)
+{
+  for (unsigned i = 0; i < s.NI; i++)
+    for (unsigned j = 0; j < s.NH; j++)
+      rprop(&w.IHW[i][j], &prev_g.IHW[i][j], &g.IHW[i][j], &prev_d.IHW[i][j]);
+
+  for (unsigned i = 0; i < s.NH; i++)
+    rprop(&w.HB[i], &prev_g.HB[i], &g.HB[i], &prev_d.HB[i]);
+  
+  for (unsigned i = 0; i < s.NH; i++)
+    for (unsigned j = 0; j < s.NO; j++)
+      rprop(&w.HOW[j][i], &prev_g.HOW[j][i], &g.HOW[j][i], &prev_d.HOW[j][i]);
+
+  for (unsigned i = 0; i < s.NO; i++)
+    rprop(&w.OB[i], &prev_g.OB[i], &g.OB[i], &prev_d.OB[i]);
+}
+
+void Nn::rprop(double *w, double *prev_g, double *g, double *prev_d)
+{
+  double d;
+  
+  if (*prev_g * *g > 0)
+    {
+      d = *prev_d * s.eta_p;
+	
+      if (d > s.delta_max)
+	d = s.delta_max;
+
+      *w += -sign(*g) * d;
+    }
+
+  else if (*prev_g * *g < 0)
+    {
+      d = *prev_d * s.eta_m;
+
+      if (d < s.delta_min)
+	d = s.delta_min;
+
+      *w -= *prev_d;
+      *g = 0;
+    }
+
+  else
+    {
+      d = *prev_d;
+      *w += -sign(*g) * d;
+    }
+
+  *prev_d = d;
+  *prev_g = *g;
 }
 
 double Nn::mse(std::vector<std::vector<double>> *I)

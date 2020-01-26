@@ -30,6 +30,8 @@ public:
   void normalize(std::vector<std::vector<double>> *, std::vector<std::vector<double>> *);
   std::vector<double> train(std::vector<std::vector<double>> *, size_t);
   void calc_grads(std::vector<std::vector<double>> *);
+  void update_w(void);
+  void rprop(double *, double *, double *, double *);
   double mse(std::vector<std::vector<double>> *);
   std::vector<double> calc_outputs(std::vector<double> *);
   std::vector<double> softmax(std::vector<double> *);
