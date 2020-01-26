@@ -1,6 +1,7 @@
 // g++ test_nn.cpp -l nn++ -L $PWD -Wl,-rpath,$PWD -o test_nn
 
 #include <iostream>
+#include <random>
 #include "nn.hpp"
 #include "metrics.hpp"
 #define NI 5
@@ -30,24 +31,41 @@ void print_matrix(std::vector<std::vector<double>> *I)
   }
 }
 
+void make_matrix(std::vector<std::vector<double>> *O, unsigned r, unsigned c)
+{
+  for (unsigned i = 0; i < r; i++)
+    {
+      std::vector<double> C;
+
+      for (unsigned j = 0; j < c; j++)
+	C.emplace_back((double) j);
+
+      O->emplace_back(C);
+    }
+}
+
+void make_matrix_random(std::vector<std::vector<double>> *O, unsigned r, unsigned c)
+{
+  std::default_random_engine generator;
+  std::uniform_int_distribution<int> distribution(1, DECA - 1);
+  
+  for (unsigned i = 0; i < r; i++)
+    {
+      std::vector<double> C;
+
+      for (unsigned j = 0; j < c; j++)
+	C.emplace_back((double) distribution(generator) / DECA);
+
+      O->emplace_back(C);
+    }
+}
+
 int main()
 {
   Spec s{ 1, NF, NH, NO, 1.2, 0.5, 50.0, MICRO };
   Nn nn(&s);
   std::vector<std::vector<double>> N, I;
-
-  unsigned r = 10, c = 5;
-
-  for (unsigned i = 0; i < r; i++)
-  {
-    std::vector<double> C;
-
-    for (unsigned j = 0; j < c; j++)
-      C.emplace_back((double) j);
-
-    I.emplace_back(C);
-  }
-
+  make_matrix_random(&I, 10, 5);
   std::cout << "Original Data\n======\n";
   print_matrix(&I);
   nn.normalize(&N, &I);
