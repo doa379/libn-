@@ -41,7 +41,9 @@ public:
   double sigmoid(double x) { return 1 / (1. + exp(-x)); };
   double dsigmoid(double x) { return sigmoid(x) * (1. - sigmoid(x)); };
   double dsoftmax(double x) { return (1. - x) * x; };
-  double dtanh(double x) { return (1. - x) * (1. + x); };
+  double dtanh(double x) { return 1. - x * x; };
+  //double dsoftmax(double x) { return dsigmoid(x); };
+  //double dtanh(double x) { return 1. - tanh(x) * tanh(x); };
   double dactivation(double x) { return dtanh(x); };
   double activation(double x) { return tanh(x); };
 };

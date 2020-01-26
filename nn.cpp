@@ -1,8 +1,8 @@
 #include <random>
 #include <algorithm>
-//#include <iostream>
 #include "nn.hpp"
 #include "metrics.hpp"
+#define INIT_D 0.01
 
 Nn::Nn(Spec *s)
 {
@@ -19,9 +19,9 @@ Nn::Nn(Spec *s)
       
       for (unsigned j = 0; j < NH; j++)
 	{
-	  w_IHW.emplace_back((double) distribution(generator) / MEGA);
+	  w_IHW.emplace_back((double) distribution(generator) / KILO);
 	  g_IHW.emplace_back();
-	  d_IHW.emplace_back(0.01);
+	  d_IHW.emplace_back(INIT_D);
 	}
 
       w.IHW.emplace_back(w_IHW);
@@ -31,9 +31,9 @@ Nn::Nn(Spec *s)
 
   for (unsigned i = 0; i < NH; i++)
     {
-      w.HB.emplace_back((double) distribution(generator) / MEGA);
+      w.HB.emplace_back((double) distribution(generator) / KILO);
       g.HB.emplace_back();
-      prev_d.HB.emplace_back(0.01);
+      prev_d.HB.emplace_back(INIT_D);
     }
 
   for (unsigned i = 0; i < NO; i++)
@@ -42,9 +42,9 @@ Nn::Nn(Spec *s)
       
       for (unsigned j = 0; j < NH; j++)
 	{
-	  w_HOW.emplace_back((double) distribution(generator) / MEGA);
+	  w_HOW.emplace_back((double) distribution(generator) / KILO);
 	  g_HOW.emplace_back();
-	  d_HOW.emplace_back(0.01);
+	  d_HOW.emplace_back(INIT_D);
 	}
 
       w.HOW.emplace_back(w_HOW);
@@ -54,12 +54,12 @@ Nn::Nn(Spec *s)
   
   for (unsigned i = 0; i < NO; i++)
     {
-      w.OB.emplace_back((double) distribution(generator) / MEGA);
+      w.OB.emplace_back((double) distribution(generator) / KILO);
       g.OB.emplace_back();
-      prev_d.OB.emplace_back(0.01);
+      prev_d.OB.emplace_back(INIT_D);
     }
 
-  prev_g = g;
+  prev_g = Weight(g);
 }
 
 Nn::~Nn(void)
@@ -189,6 +189,13 @@ void Nn::rprop(double *w, double *prev_g, double *g, double *prev_d)
   else
     {
       d = *prev_d;
+      
+      if (d > s.delta_max)
+	d = s.delta_max;
+
+      else if (d < s.delta_min)
+	d = s.delta_min;
+	   
       *w += -sign(*g) * d;
     }
 
@@ -211,7 +218,7 @@ double Nn::mse(std::vector<std::vector<double>> *I)
 	}
     }
   
-  return se / (I->size() - 1);
+  return se / (I->size() - 1) / s.NO;
 }
 
 std::vector<double> Nn::calc_outputs(std::vector<double> *I)
@@ -239,8 +246,8 @@ std::vector<double> Nn::calc_outputs(std::vector<double> *I)
       O.emplace_back(os);
     }
 
-  return softmax(&O);
-  //return O;
+  //return softmax(&O);
+  return O;
 }
 
 std::vector<double> Nn::softmax(std::vector<double> *I)

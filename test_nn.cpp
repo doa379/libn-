@@ -53,7 +53,7 @@ int main()
   nn.normalize(&N, &I);
   std::cout << "Normalized Data\n======\n";
   print_matrix(&N);
-  std::vector<double> MSE = nn.train(&N, 1000);
+  std::vector<double> MSE = nn.train(&N, 10000);
   std::cout << "Errors\n======\n";
   
   for (double &mse : MSE)
