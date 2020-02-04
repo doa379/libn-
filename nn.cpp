@@ -104,7 +104,7 @@ std::vector<double> Nn::train(std::vector<std::vector<double>> *I, size_t epochs
     if ((i + 1) % (epochs / 10) == 0)
       MSE.emplace_back(mse(I));
 
-    g = Weight(g0);
+    g = g0; // Reset gradients
     calc_grads(I);
     update_w();
   }

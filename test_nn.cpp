@@ -8,6 +8,7 @@
 #define NF NI
 #define NH 10
 #define NO NF
+#define TT_RATIO 0.8
 
 void print_vector(std::vector<double> *I)
 {
@@ -64,15 +65,23 @@ int main()
 {
   Spec s{ NF, NH, NO, 1.2, 0.5, 50.0, MICRO };
   Nn nn(&s);
-  std::vector<std::vector<double>> N, I;
+  std::vector<std::vector<double>> N, I, TR, TE;
   make_matrix(&I, 10, 5);
   std::cout << "Original Data\n======\n";
   print_matrix(&I);
   std::cout << "Normalized Data\n======\n";
   nn.normalize(&N, &I);
-  //N = I;
   print_matrix(&N);
-  std::vector<double> MSE = nn.train(&N, 1000);
+
+  for (std::vector<std::vector<double>>::iterator M = N.begin(); 
+    M < N.end() - (TT_RATIO * N.size()); M++)
+    TR.emplace_back(*M);
+
+  for (std::vector<std::vector<double>>::iterator M = N.end() - (TT_RATIO * N.size()); 
+    M < N.end(); M++)
+    TE.emplace_back(*M);
+ 
+  std::vector<double> MSE = nn.train(&TR, 1000);
   std::cout << "Errors\n======\n";
 
   for (double &mse : MSE)
